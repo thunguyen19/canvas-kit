@@ -9,7 +9,7 @@ import {withSnapshotsEnabled} from '../../../../utils/storybook';
 import {Avatar} from '../index';
 
 // @ts-ignore: Cannot find module error
-import testAvatar from './test-avatar.png';
+import testAvatar from './examples/test-avatar.png';
 // eslint-disable-next-line no-empty-function
 const noop = () => {};
 
