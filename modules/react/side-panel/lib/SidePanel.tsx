@@ -2,10 +2,12 @@ import * as React from 'react';
 import styled from '@emotion/styled';
 
 import {CanvasSystemIcon} from '@workday/design-assets-types';
-import {colors, space, CanvasSpaceValues} from '@workday/canvas-kit-react/tokens';
+import {colors, CanvasSpaceValues} from '@workday/canvas-kit-react/tokens';
 import {TertiaryButton, TertiaryButtonProps} from '@workday/canvas-kit-react/button';
 import {chevronLeftIcon, chevronRightIcon} from '@workday/canvas-system-icons-web';
 import {Heading} from '@workday/canvas-kit-react/text';
+import {system} from '@workday/canvas-tokens-web';
+import {createStencil, handleCsProp} from '@workday/canvas-kit-styling';
 
 export interface SidePanelProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -126,15 +128,16 @@ const SidePanelContainer = styled('div')<
   })
 );
 
-const ChildrenContainer = styled('div')<Pick<SidePanelProps, 'openWidth' | 'open'>>(
-  {
+const childrenContainerStencil = createStencil({
+  vars: {
+    open: '',
+  },
+  base: ({open}) => ({
     transition: 'none',
     zIndex: 1, // show above SidePanelFooter when screen is small vertically
-  },
-  ({open, openWidth}) => ({
-    width: open ? openWidth : closedWidth,
-  })
-);
+    width: open ? '300px' : system.space.x10,
+  }),
+});
 
 const ToggleButton = styled(TertiaryButton, {shouldForwardProp: prop => prop !== 'openDirection'})<
   TertiaryButtonProps & Pick<SidePanelProps, 'openDirection'>
@@ -208,14 +211,14 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
         open={open}
         {...elemProps}
       >
-        <ChildrenContainer open={open} openWidth={openWidth}>
+        <div {...childrenContainerStencil({open: open ? 'open' : ''})}>
           {header && open ? (
             <Heading as="h2" size="small" marginTop="zero">
               {header}
             </Heading>
           ) : null}
           {this.props.children}
-        </ChildrenContainer>
+        </div>
         <SidePanelFooter openWidth={openWidth} open={open}>
           {onToggleClick && (
             <ToggleButton
