@@ -112,9 +112,9 @@ export const sidePanelStencil = createStencil({
     padding: open ? padding || space.m : `${space.s} 0`,
     alignItems: open ? undefined : 'center',
     boxShadow: open ? undefined : '0 8px 16px -8px rgba(0, 0, 0, 0.16)',
-    backgroundColor: open ? getOpenBackgroundColor(backgroundColor) : colors.frenchVanilla100,
-    right: openDirection === SidePanelOpenDirection.Right ? space.zero : undefined,
-    left: openDirection === SidePanelOpenDirection.Left ? space.zero : undefined,
+    // backgroundColor: open ? getOpenBackgroundColor(backgroundColor) : colors.frenchVanilla100,
+    // right: openDirection === SidePanelOpenDirection.Right ? space.zero : undefined,
+    // left: openDirection === SidePanelOpenDirection.Left ? space.zero : undefined,
   }),
 });
 
@@ -129,18 +129,17 @@ const childrenStencil = createStencil({
   }),
 });
 
-const ToggleButton = styled(TertiaryButton, {shouldForwardProp: prop => prop !== 'openDirection'})<
-  TertiaryButtonProps & Pick<SidePanelProps, 'openDirection'>
->(
-  {
+const toggleButtonStencil = createStencil({
+  vars: {
+    openDirection: '',
+  },
+  base: ({openDirection}) => ({
     position: 'absolute',
     bottom: space.s,
-  },
-  ({openDirection}) => ({
-    right: openDirection === SidePanelOpenDirection.Left ? space.s : '',
-    left: openDirection === SidePanelOpenDirection.Right ? space.s : '',
-  })
-);
+    // right: openDirection === SidePanelOpenDirection.Left ? space.s : '',
+    // left: openDirection === SidePanelOpenDirection.Right ? space.s : '',
+  }),
+});
 
 const sidePanelFooterStencil = createStencil({
   vars: {
@@ -148,9 +147,9 @@ const sidePanelFooterStencil = createStencil({
   },
   base: ({open}) => ({
     position: 'absolute',
-    bottom: '0',
-    height: 120, // ?
-    left: 0,
+    bottom: system.space.zero,
+    height: calc.multiply(system.space.x10, 3),
+    left: system.space.zero,
     background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.0001) 0%, #FFFFFF 100%)',
     width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
   }),
@@ -196,13 +195,15 @@ export const SidePanel = createComponent('div')({
     ref,
     Element
   ) => {
+    const [screenSize, setScreenSize] = React.useState(window.innerWidth || 0);
+
     return (
       <Element
         ref={ref}
         {...handleCsProp(
           elemProps,
           sidePanelStencil({
-            backgroundColor,
+            backgroundColor: 'yo',
             openNavigationAriaLabel,
             closeNavigationAriaLabel,
           })
@@ -218,11 +219,11 @@ export const SidePanel = createComponent('div')({
         </div>
         <div {...sidePanelFooterStencil({open: open ? 'open' : ''})}>
           {onToggleClick && (
-            <ToggleButton
-              openDirection={openDirection}
+            <TertiaryButton
               aria-label={open ? closeNavigationAriaLabel : openNavigationAriaLabel}
-              onClick={onToggleClick}
               icon={toggleButtonDirection(open, openDirection)}
+              onClick={onToggleClick}
+              cs={toggleButtonStencil({openDirection: 'openDirection'})}
             />
           )}
         </div>
