@@ -1,13 +1,14 @@
 import * as React from 'react';
 import styled from '@emotion/styled';
 
+import {createComponent} from '@workday/canvas-kit-react/common';
 import {CanvasSystemIcon} from '@workday/design-assets-types';
-import {colors, CanvasSpaceValues} from '@workday/canvas-kit-react/tokens';
+import {colors, space, CanvasSpaceValues} from '@workday/canvas-kit-react/tokens';
 import {TertiaryButton, TertiaryButtonProps} from '@workday/canvas-kit-react/button';
 import {chevronLeftIcon, chevronRightIcon} from '@workday/canvas-system-icons-web';
 import {Heading} from '@workday/canvas-kit-react/text';
 import {system} from '@workday/canvas-tokens-web';
-import {createStencil, handleCsProp} from '@workday/canvas-kit-styling';
+import {calc, createStencil, cssVar, handleCsProp} from '@workday/canvas-kit-styling';
 
 export interface SidePanelProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -80,10 +81,25 @@ export enum SidePanelBackgroundColor {
 
 const closedWidth = space.xxl;
 
-const SidePanelContainer = styled('div')<
-  Pick<SidePanelProps, 'open' | 'backgroundColor' | 'padding' | 'openWidth' | 'openDirection'>
->(
-  {
+export const sidePanelStencil = createStencil({
+  vars: {
+    open: '',
+    height: '',
+    backgroundColor: '',
+    openNavigationAriaLabel: '',
+    closeNavigationAriaLabel: '',
+    padding: '',
+    openDirection: '',
+  },
+  base: ({
+    openDirection,
+    padding,
+    open,
+    backgroundColor,
+    openNavigationAriaLabel,
+    closeNavigationAriaLabel,
+  }) => ({
+    role: 'region',
     overflow: 'hidden',
     height: '100%',
     boxSizing: 'border-box',
@@ -91,51 +107,25 @@ const SidePanelContainer = styled('div')<
     flexDirection: 'column',
     transition: 'width 200ms ease',
     position: 'absolute',
-  },
-  ({open}) => ({
+    // backgroundColor: cssVar(backgroundColor, system.color.bg.alt.strong),
+    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
+    padding: open ? padding || space.m : `${space.s} 0`,
     alignItems: open ? undefined : 'center',
     boxShadow: open ? undefined : '0 8px 16px -8px rgba(0, 0, 0, 0.16)',
-  }),
-  ({open, backgroundColor}) => {
-    let openBackgroundColor;
-
-    switch (backgroundColor) {
-      case SidePanelBackgroundColor.Transparent:
-        openBackgroundColor = 'transparent';
-        break;
-      case SidePanelBackgroundColor.Gray:
-        openBackgroundColor = colors.soap100;
-        break;
-      case SidePanelBackgroundColor.White:
-      default:
-        openBackgroundColor = colors.frenchVanilla100;
-        break;
-    }
-
-    return {
-      backgroundColor: open ? openBackgroundColor : colors.frenchVanilla100,
-    };
-  },
-  ({open, openWidth}) => ({
-    width: open ? openWidth : closedWidth,
-  }),
-  ({open, padding}) => ({
-    padding: open ? padding || space.m : `${space.s} 0`,
-  }),
-  ({openDirection}) => ({
+    backgroundColor: open ? getOpenBackgroundColor(backgroundColor) : colors.frenchVanilla100,
     right: openDirection === SidePanelOpenDirection.Right ? space.zero : undefined,
     left: openDirection === SidePanelOpenDirection.Left ? space.zero : undefined,
-  })
-);
+  }),
+});
 
-const childrenContainerStencil = createStencil({
+const childrenStencil = createStencil({
   vars: {
     open: '',
   },
   base: ({open}) => ({
     transition: 'none',
     zIndex: 1, // show above SidePanelFooter when screen is small vertically
-    width: open ? '300px' : system.space.x10,
+    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
   }),
 });
 
@@ -152,114 +142,91 @@ const ToggleButton = styled(TertiaryButton, {shouldForwardProp: prop => prop !==
   })
 );
 
-const SidePanelFooter = styled('div')<Pick<SidePanelProps, 'open' | 'openWidth'>>(
-  {
+const sidePanelFooterStencil = createStencil({
+  vars: {
+    open: '',
+  },
+  base: ({open}) => ({
     position: 'absolute',
     bottom: '0',
-    height: 120,
+    height: 120, // ?
     left: 0,
     background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.0001) 0%, #FFFFFF 100%)',
-  },
-  ({open, openWidth}) => ({
-    width: open ? openWidth : space.xxl,
-  })
-);
+    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
+  }),
+});
 
-export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
-  static OpenDirection = SidePanelOpenDirection;
-  static BackgroundColor = SidePanelBackgroundColor;
-
-  constructor(props: SidePanelProps) {
-    super(props);
-    this.handleResize = this.handleResize.bind(this);
+const getOpenBackgroundColor = (backgroundColor?: SidePanelBackgroundColor): string => {
+  switch (backgroundColor) {
+    case SidePanelBackgroundColor.Transparent:
+      return 'transparent';
+    case SidePanelBackgroundColor.Gray:
+      return colors.soap100;
+    case SidePanelBackgroundColor.White:
+    default:
+      return colors.frenchVanilla100;
   }
+};
 
-  state = {
-    screenSize: typeof window !== 'undefined' ? window.innerWidth : 0,
-  };
-
-  public componentDidMount() {
-    window.addEventListener('resize', this.handleResize);
+const toggleButtonDirection = (
+  open: boolean,
+  openDirection?: SidePanelOpenDirection
+): CanvasSystemIcon => {
+  if (openDirection !== SidePanelOpenDirection.Right) {
+    return open ? chevronLeftIcon : chevronRightIcon;
+  } else {
+    return open ? chevronRightIcon : chevronLeftIcon;
   }
-  public componentWillUnmount() {
-    window.removeEventListener('resize', this.handleResize);
-  }
+};
 
-  public render() {
-    const {
-      backgroundColor = SidePanelBackgroundColor.White,
-      openNavigationAriaLabel = 'open navigation',
-      closeNavigationAriaLabel = 'close navigation',
-      openDirection = SidePanelOpenDirection.Left,
-      breakpoint = 768,
-      openWidth = 300,
+export const SidePanel = createComponent('div')({
+  displayName: 'SidePanel',
+  Component: (
+    {
+      children,
+      backgroundColor,
       header,
-      onToggleClick,
       open,
-      padding,
-      onBreakpointChange,
+      onToggleClick,
+      openDirection,
+      closeNavigationAriaLabel,
+      openNavigationAriaLabel,
       ...elemProps
-    } = this.props;
-
+    }: SidePanelProps,
+    ref,
+    Element
+  ) => {
     return (
-      <SidePanelContainer
-        role="region"
-        padding={padding}
-        openDirection={openDirection}
-        openWidth={openWidth}
-        backgroundColor={backgroundColor}
-        open={open}
-        {...elemProps}
+      <Element
+        ref={ref}
+        {...handleCsProp(
+          elemProps,
+          sidePanelStencil({
+            backgroundColor,
+            openNavigationAriaLabel,
+            closeNavigationAriaLabel,
+          })
+        )}
       >
-        <div {...childrenContainerStencil({open: open ? 'open' : ''})}>
+        <div {...childrenStencil({open: open ? 'open' : ''})}>
           {header && open ? (
             <Heading as="h2" size="small" marginTop="zero">
               {header}
             </Heading>
           ) : null}
-          {this.props.children}
+          {children}
         </div>
-        <SidePanelFooter openWidth={openWidth} open={open}>
+        <div {...sidePanelFooterStencil({open: open ? 'open' : ''})}>
           {onToggleClick && (
             <ToggleButton
               openDirection={openDirection}
               aria-label={open ? closeNavigationAriaLabel : openNavigationAriaLabel}
-              onClick={this.onToggleClick}
-              icon={this.toggleButtonDirection(open, openDirection)}
+              onClick={onToggleClick}
+              icon={toggleButtonDirection(open, openDirection)}
             />
           )}
-        </SidePanelFooter>
-      </SidePanelContainer>
+        </div>
+      </Element>
     );
-  }
-
-  private handleResize = () => {
-    if (!this.props.onBreakpointChange || !this.props.breakpoint) {
-      return;
-    }
-
-    if (window.innerWidth > this.props.breakpoint && !this.props.open) {
-      this.props.onBreakpointChange(true);
-    }
-    if (window.innerWidth <= this.props.breakpoint && this.props.open) {
-      this.props.onBreakpointChange(false);
-    }
-  };
-
-  private onToggleClick = () => {
-    if (this.props.onToggleClick) {
-      this.props.onToggleClick();
-    }
-  };
-
-  private toggleButtonDirection = (
-    open: boolean,
-    openDirection: SidePanelOpenDirection
-  ): CanvasSystemIcon => {
-    if (openDirection !== SidePanelOpenDirection.Right) {
-      return open ? chevronLeftIcon : chevronRightIcon;
-    } else {
-      return open ? chevronRightIcon : chevronLeftIcon;
-    }
-  };
-}
+  },
+});
