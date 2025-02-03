@@ -1,5 +1,4 @@
-import * as React from 'react';
-import styled from '@emotion/styled';
+import React, {useState, useEffect, useCallback} from 'react';
 
 import {createComponent} from '@workday/canvas-kit-react/common';
 import {CanvasSystemIcon} from '@workday/design-assets-types';
@@ -8,7 +7,9 @@ import {TertiaryButton, TertiaryButtonProps} from '@workday/canvas-kit-react/but
 import {chevronLeftIcon, chevronRightIcon} from '@workday/canvas-system-icons-web';
 import {Heading} from '@workday/canvas-kit-react/text';
 import {system} from '@workday/canvas-tokens-web';
-import {calc, createStencil, cssVar, handleCsProp} from '@workday/canvas-kit-styling';
+import {calc, createStencil, cssVar, handleCsProp, px2rem} from '@workday/canvas-kit-styling';
+import styled from '@emotion/styled';
+import {background} from '../../layout';
 
 export interface SidePanelProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -79,82 +80,6 @@ export enum SidePanelBackgroundColor {
   Gray,
 }
 
-const closedWidth = space.xxl;
-
-export const sidePanelStencil = createStencil({
-  vars: {
-    open: '',
-    height: '',
-    backgroundColor: '',
-    openNavigationAriaLabel: '',
-    closeNavigationAriaLabel: '',
-    padding: '',
-    openDirection: '',
-  },
-  base: ({
-    openDirection,
-    padding,
-    open,
-    backgroundColor,
-    openNavigationAriaLabel,
-    closeNavigationAriaLabel,
-  }) => ({
-    role: 'region',
-    overflow: 'hidden',
-    height: '100%',
-    boxSizing: 'border-box',
-    display: 'flex',
-    flexDirection: 'column',
-    transition: 'width 200ms ease',
-    position: 'absolute',
-    // backgroundColor: cssVar(backgroundColor, system.color.bg.alt.strong),
-    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
-    padding: open ? padding || space.m : `${space.s} 0`,
-    alignItems: open ? undefined : 'center',
-    boxShadow: open ? undefined : '0 8px 16px -8px rgba(0, 0, 0, 0.16)',
-    // backgroundColor: open ? getOpenBackgroundColor(backgroundColor) : colors.frenchVanilla100,
-    // right: openDirection === SidePanelOpenDirection.Right ? space.zero : undefined,
-    // left: openDirection === SidePanelOpenDirection.Left ? space.zero : undefined,
-  }),
-});
-
-const childrenStencil = createStencil({
-  vars: {
-    open: '',
-  },
-  base: ({open}) => ({
-    transition: 'none',
-    zIndex: 1, // show above SidePanelFooter when screen is small vertically
-    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
-  }),
-});
-
-const toggleButtonStencil = createStencil({
-  vars: {
-    openDirection: '',
-  },
-  base: ({openDirection}) => ({
-    position: 'absolute',
-    bottom: space.s,
-    // right: openDirection === SidePanelOpenDirection.Left ? space.s : '',
-    // left: openDirection === SidePanelOpenDirection.Right ? space.s : '',
-  }),
-});
-
-const sidePanelFooterStencil = createStencil({
-  vars: {
-    open: '',
-  },
-  base: ({open}) => ({
-    position: 'absolute',
-    bottom: system.space.zero,
-    height: calc.multiply(system.space.x10, 3),
-    left: system.space.zero,
-    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.0001) 0%, #FFFFFF 100%)',
-    width: open ? calc.multiply(system.space.x1, 75) : system.space.x10,
-  }),
-});
-
 const getOpenBackgroundColor = (backgroundColor?: SidePanelBackgroundColor): string => {
   switch (backgroundColor) {
     case SidePanelBackgroundColor.Transparent:
@@ -167,6 +92,98 @@ const getOpenBackgroundColor = (backgroundColor?: SidePanelBackgroundColor): str
   }
 };
 
+const closedWidth = space.xxl;
+
+export const sidePanelStencil = createStencil({
+  vars: {
+    bg: '',
+    openWidth: '',
+    padding: '',
+    backgroundColor: '',
+  },
+  base: () => ({
+    overflow: 'hidden',
+    height: '100%',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    transition: 'width 200ms ease',
+    position: 'absolute',
+    '[data-part="children"]': {
+      transition: 'none',
+      zIndex: 1,
+    },
+    '[data-part="toggle-btn"]': {
+      position: 'absolute',
+      bottom: system.space.x4,
+    },
+  }),
+  modifiers: {
+    open: {
+      true: ({openWidth}) => ({
+        backgroundColor: system.color.bg.default,
+        // backgroundColor: cssVar(getOpenBackgroundColor(SidePanelBackgroundColor.White)),
+        // width: openWidth,
+        '[data-part="children"]': {
+          width: openWidth,
+        },
+      }),
+      false: {
+        alignItems: 'center',
+        boxShadow: '0 8px 16px -8px rgba(0, 0, 0, 0.16)',
+        backgroundColor: system.color.bg.default,
+        width: system.space.x16,
+        '[data-part="children"]': {
+          width: system.space.x10,
+        },
+      },
+    },
+  },
+});
+
+const childrenStencil = createStencil({
+  vars: {
+    openWidth: '',
+  },
+  base: {
+    transition: 'none',
+    zIndex: 1,
+  },
+  modifiers: {
+    open: {
+      true: ({openWidth}) => ({
+        width: openWidth,
+      }),
+      false: {
+        width: system.space.x10,
+      },
+    },
+  },
+});
+
+const sidePanelFooterStencil = createStencil({
+  vars: {
+    openWidth: '',
+  },
+  base: () => ({
+    position: 'absolute',
+    bottom: system.space.zero,
+    height: calc.multiply(system.space.x10, 3),
+    left: system.space.zero,
+    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.0001) 0%, #FFFFFF 100%)',
+  }),
+  modifiers: {
+    open: {
+      true: ({openWidth}) => ({
+        width: openWidth,
+      }),
+      false: {
+        width: system.space.x10,
+      },
+    },
+  },
+});
+
 const toggleButtonDirection = (
   open: boolean,
   openDirection?: SidePanelOpenDirection
@@ -178,38 +195,96 @@ const toggleButtonDirection = (
   }
 };
 
+const mapBackgroundColor = (open: boolean, backgroundColor?: SidePanelBackgroundColor): string => {
+  let openBackgroundColor;
+
+  switch (backgroundColor) {
+    case SidePanelBackgroundColor.Transparent:
+      openBackgroundColor = 'transparent';
+      break;
+    case SidePanelBackgroundColor.Gray:
+      openBackgroundColor = colors.soap100;
+      break;
+    case SidePanelBackgroundColor.White:
+    default:
+      openBackgroundColor = colors.frenchVanilla100;
+      break;
+  }
+
+  return open ? openBackgroundColor : colors.frenchVanilla100;
+};
+
 export const SidePanel = createComponent('div')({
   displayName: 'SidePanel',
   Component: (
     {
       children,
-      backgroundColor,
+      backgroundColor = SidePanelBackgroundColor.White,
+      openNavigationAriaLabel = 'open navigation',
+      closeNavigationAriaLabel = 'close navigation',
+      openDirection = SidePanelOpenDirection.Left,
+      breakpoint = 768,
+      openWidth = 300,
       header,
-      open,
       onToggleClick,
-      openDirection,
-      closeNavigationAriaLabel,
-      openNavigationAriaLabel,
+      open,
+      padding,
+      onBreakpointChange,
       ...elemProps
     }: SidePanelProps,
     ref,
     Element
   ) => {
-    const [screenSize, setScreenSize] = React.useState(window.innerWidth || 0);
+    const [screenSize, setScreenSize] = useState(
+      typeof window !== 'undefined' ? window.innerWidth : 0
+    );
+
+    const handleResize = useCallback(() => {
+      if (!onBreakpointChange || !breakpoint) {
+        return;
+      }
+
+      if (window.innerWidth > breakpoint && !open) {
+        onBreakpointChange(true);
+      }
+      if (window.innerWidth <= breakpoint && open) {
+        onBreakpointChange(false);
+      }
+    }, [onBreakpointChange, breakpoint, open]);
+
+    useEffect(() => {
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }, [handleResize]);
 
     return (
       <Element
         ref={ref}
+        role="region"
         {...handleCsProp(
           elemProps,
           sidePanelStencil({
-            backgroundColor: 'yo',
-            openNavigationAriaLabel,
-            closeNavigationAriaLabel,
+            open: open,
+            // backgroundColor: 'yo',
           })
         )}
       >
-        <div {...childrenStencil({open: open ? 'open' : ''})}>
+        {/* <Element ref={ref} data-part="children">
+          {header && open ? (
+            <Heading as="h2" size="small" marginTop="zero">
+              {header}
+            </Heading>
+          ) : null}
+          {children}
+        </Element> */}
+        <div
+          {...childrenStencil({
+            open,
+            openWidth: typeof openWidth === 'number' ? px2rem(openWidth) : openWidth,
+          })}
+        >
           {header && open ? (
             <Heading as="h2" size="small" marginTop="zero">
               {header}
@@ -217,13 +292,20 @@ export const SidePanel = createComponent('div')({
           ) : null}
           {children}
         </div>
-        <div {...sidePanelFooterStencil({open: open ? 'open' : ''})}>
+        <div
+          {...sidePanelFooterStencil({
+            open,
+            openWidth: typeof openWidth === 'number' ? px2rem(openWidth) : openWidth,
+          })}
+        >
           {onToggleClick && (
             <TertiaryButton
+              data-part="toggle-btn"
               aria-label={open ? closeNavigationAriaLabel : openNavigationAriaLabel}
-              icon={toggleButtonDirection(open, openDirection)}
               onClick={onToggleClick}
-              cs={toggleButtonStencil({openDirection: 'openDirection'})}
+              icon={toggleButtonDirection(open, openDirection)}
+              right={openDirection === SidePanelOpenDirection.Left ? space.s : ''}
+              left={openDirection === SidePanelOpenDirection.Right ? space.s : ''}
             />
           )}
         </div>
